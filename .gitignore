@@ -6,3 +6,6 @@ data
 
 # Exclude .env file
 .env
+
+# Exclude output
+src/output
