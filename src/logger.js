@@ -1,17 +1,22 @@
 const pino = require('pino');
 const pinoLoki = require('pino-loki');
 
+require('dotenv').config();
+
 const logger = pino({
     level: 'info',
     transport: {
         target: 'pino-loki',
         options: {
-            host: 'https://logs-prod-018.grafana.net', 
-            basicAuth: '',
+            host: process.env.LOKI_HOST,
+            basicAuth: {
+				username: process.env.LOKI_AUTH_USERNAME,
+				password: process.env.LOKI_AUTH_PASSWORD,
+			},
             labels: { app: 'log-analyzer', job: 'js-app' },
-            interval: 5,                    
-            timeout: 2000,                 
-            silenceErrors: false           
+            interval: 5,
+            timeout: 2000,
+            silenceErrors: false
         }
     }
 });
