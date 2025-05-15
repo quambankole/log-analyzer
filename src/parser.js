@@ -1,6 +1,5 @@
 const fs = require('fs');
 const readline = require('readline');
-const dayjs = require('dayjs');
 const { logMessage } = require('./logger');
 
 // Summary stats
@@ -8,7 +7,6 @@ const logSummary = {
     filesProcessed: 0,
     filesSkipped: 0,
     totalLogsParsed: 0,
-    noTimestampCount: 0,
     jsonParseErrors: 0,
     lineParseErrors: 0
 };
@@ -18,7 +16,6 @@ function logFinalSummary() {
         totalFilesProcessed: logSummary.filesProcessed,
         totalFilesSkipped: logSummary.filesSkipped,
         totalLogsParsed: logSummary.totalLogsParsed,
-        noTimestampCount: logSummary.noTimestampCount,
         jsonParseErrors: logSummary.jsonParseErrors,
         lineParseErrors: logSummary.lineParseErrors
     });
@@ -38,28 +35,30 @@ async function parseLogFile(filePath) {
 
         rl.on('line', (line) => {
             try {
-                const timestampMatch = line.match(/^\[([\d]{4}-[\d]{2}-[\d]{2}T[\d]{2}:[\d]{2}:[\d]{2}\.[\d]{6}\+[\d]{2}:[\d]{2})\]/);
-                if (!timestampMatch) {
-                    logSummary.noTimestampCount++;
+                const jsonStringStart = line.indexOf('{');
+                const jsonStringEnd = line.lastIndexOf('}') + 1;
+                if (jsonStringStart === -1 || jsonStringEnd === 0) {
+                    logSummary.lineParseErrors++;
                     return;
                 }
 
-                const timestamp = timestampMatch[1];
-                const jsonStringStart = line.indexOf('load ') + 5;
-                let jsonString = line.substring(jsonStringStart).trim().replace(/\[\]$/, '');
+                let jsonString = line.substring(jsonStringStart, jsonStringEnd).trim();
 
                 let data;
+
                 try {
                     data = JSON.parse(jsonString);
-                } catch {
+                } 
+                
+                catch {
                     logSummary.jsonParseErrors++;
                     return;
                 }
-
-                data.timestamp = dayjs(timestamp).format('YYYY-MM-DD');
                 logs.push(data);
+                
                 logSummary.totalLogsParsed++;
-            } catch {
+            } 
+            catch {
                 logSummary.lineParseErrors++;
             }
         });
@@ -81,16 +80,7 @@ async function parseLogFile(filePath) {
 // Parse all log files
 async function parseAllLogFiles(directory) {
     try {
-        if (!fs.existsSync(directory)) {
-            fs.mkdirSync(directory, { recursive: true });
-            logMessage('warn', 'Directory created', { directory });
-        }
-
         const files = fs.readdirSync(directory).filter(file => file.endsWith('.log'));
-        if (files.length === 0) {
-            logMessage('warn', 'No log files found in the directory', { directory });
-            return [];
-        }
 
         const allLogs = [];
         for (const file of files) {
@@ -115,4 +105,5 @@ async function parseAllLogFiles(directory) {
 
 module.exports = { parseLogFile, parseAllLogFiles };
 console.log("Parser working...");
-parseAllLogFiles('./data/vm-logs');
+
+
